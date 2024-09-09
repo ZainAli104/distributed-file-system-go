@@ -1,4 +1,4 @@
-module github.com/ZainAli104/foreverstore
+module github.com/ZainAli104/distributed-file-system-go
 
 go 1.22.3
 

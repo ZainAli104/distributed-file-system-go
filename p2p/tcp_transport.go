@@ -3,7 +3,6 @@ package p2p
 import (
 	"fmt"
 	"net"
-	"sync"
 )
 
 // TCPPeer represents the remote node over a TCP established connection.
@@ -22,24 +21,35 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+// Close implements the Peer interface.
+func (p *TCPPeer) Close() error {
+	return p.conn.Close()
+}
+
 type TCPTransportOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
 	Decoder       Decoder
+	OnPeer        func(Peer) error
 }
 
 type TCPTransport struct {
 	TCPTransportOpts
 	listener net.Listener
-
-	mu    sync.RWMutex
-	peers map[net.Addr]Peer
+	rpcch    chan RPC
 }
 
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
+		rpcch:            make(chan RPC),
 	}
+}
+
+// Consume implements the Transport interface, which will return read-only channel
+// for reading the incoming messages received from another peer in the network.
+func (t *TCPTransport) Consume() <-chan RPC {
+	return t.rpcch
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
@@ -65,43 +75,37 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 
-type Temp struct{}
-
 func (t *TCPTransport) handleConn(conn net.Conn) {
+	var err error
+
+	defer func() {
+		fmt.Printf("Closing Peer connection: %v\n", conn.RemoteAddr())
+		conn.Close()
+	}()
+
 	peer := NewTCPPeer(conn, true)
 
-	if err := t.HandshakeFunc(conn); err != nil {
-		_ = conn.Close()
-		fmt.Printf("Error TCP shaking hands: %v\n", err)
+	if err = t.HandshakeFunc(peer); err != nil {
 		return
 	}
 
+	if t.OnPeer != nil {
+		if err = t.OnPeer(peer); err != nil {
+			return
+		}
+	}
+
 	// Read loop
-	msg := &Temp{}
+	rpc := RPC{}
 	for {
-		if err := t.Decoder.Decode(conn, msg); err != nil {
+		if err = t.Decoder.Decode(conn, &rpc); err != nil {
 			fmt.Printf("Error TCP decoding message: %v\n", err)
 			continue
 		}
 
-		fmt.Printf("Received message: %v\n", msg)
+		rpc.From = conn.RemoteAddr()
+		t.rpcch <- rpc
+
+		fmt.Printf("Received message: %+v\n", rpc)
 	}
-
-	//buf := new(bytes.Buffer)
-	//for {
-	//	data := make([]byte, 1024)
-	//	n, err := conn.Read(data)
-	//	if err != nil {
-	//		fmt.Printf("Error TCP reading data: %v\n", err)
-	//		return
-	//	}
-	//
-	//	buf.Write(data[:n])
-	//
-	//	if n < 1024 {
-	//		break
-	//	}
-	//}
-
-	fmt.Printf("New incoming connection from %v\n", peer)
 }

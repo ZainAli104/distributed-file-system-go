@@ -6,11 +6,18 @@ import (
 	"log"
 )
 
+func OnPeer(peer p2p.Peer) error {
+	peer.Close()
+	fmt.Println("Doing something with the peer outside of TCPTransport")
+	return nil
+}
+
 func main() {
 	tcpOpts := p2p.TCPTransportOpts{
 		ListenAddr:    ":3000",
 		HandshakeFunc: p2p.NOPHandshakeFunc,
 		Decoder:       p2p.DefaultDecoder{},
+		OnPeer:        OnPeer,
 	}
 
 	tr := p2p.NewTCPTransport(tcpOpts)

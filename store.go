@@ -18,7 +18,7 @@ func CASPathTransformFunc(key string) string {
 	paths := make([]string, sliceLen)
 
 	for i := 0; i < sliceLen; i++ {
-		from, to := i*blocksize, (i+blocksize)*blocksize
+		from, to := i*blocksize, (i+blocksize)+blocksize
 		paths[i] = hashStr[from:to]
 	}
 

@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
 func TestPathTransformFunc(t *testing.T) {
-	// TODO: Implement
+	key := "momsbestpicture"
+	pathname := CASPathTransformFunc(key)
+	fmt.Println("Pathname: ", pathname)
 }
 
 func TestStore(t *testing.T) {

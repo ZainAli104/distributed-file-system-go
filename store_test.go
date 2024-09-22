@@ -19,6 +19,26 @@ func TestPathTransformFunc(t *testing.T) {
 	}
 }
 
+func TestStoreDeleteKey(t *testing.T) {
+	opts := StoreOpts{
+		PathTransformFunc: CASPathTransformFunc,
+	}
+	s := NewStore(opts)
+
+	key := "myspecialspictures"
+	data := []byte("some jpg bytes")
+
+	err := s.writeStream(key, bytes.NewReader(data))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = s.Delete(key)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestStore(t *testing.T) {
 	opts := StoreOpts{
 		PathTransformFunc: CASPathTransformFunc,
@@ -39,24 +59,8 @@ func TestStore(t *testing.T) {
 	}
 
 	b, _ := io.ReadAll(r)
-
 	if !bytes.Equal(b, data) {
 		t.Errorf("Expected %s, got %s", data, b)
-	}
-}
-
-func TestStoreDeleteKey(t *testing.T) {
-	opts := StoreOpts{
-		PathTransformFunc: CASPathTransformFunc,
-	}
-	s := NewStore(opts)
-
-	key := "myspecialspictures"
-	data := []byte("some jpg bytes")
-
-	err := s.writeStream(key, bytes.NewReader(data))
-	if err != nil {
-		t.Error(err)
 	}
 
 	err = s.Delete(key)

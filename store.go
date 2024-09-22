@@ -37,6 +37,14 @@ type PathKey struct {
 	Filename string
 }
 
+func (p PathKey) FirstPathName() string {
+	paths := strings.Split(p.PathName, "/")
+	if len(paths) == 0 {
+		return ""
+	}
+	return paths[0]
+}
+
 func (p PathKey) FullPath() string {
 	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
 }
@@ -71,7 +79,7 @@ func (s *Store) Delete(key string) error {
 		log.Printf("Deleted %s\n", pathKey.FullPath())
 	}()
 
-	return os.RemoveAll(pathKey.FullPath())
+	return os.RemoveAll(pathKey.FirstPathName())
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {

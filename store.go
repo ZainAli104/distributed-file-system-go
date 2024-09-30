@@ -83,10 +83,7 @@ func (s *Store) Has(key string) bool {
 	pathKey := s.PathTransformFunc(key)
 	fullPathWithRoot := s.Root + "/" + pathKey.FullPath()
 	_, err := os.Stat(fullPathWithRoot)
-	if errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-	return true
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 func (s *Store) Clear() error {
@@ -102,6 +99,10 @@ func (s *Store) Delete(key string) error {
 
 	firstPathNameWithRoot := s.Root + "/" + pathKey.FirstPathName()
 	return os.RemoveAll(firstPathNameWithRoot)
+}
+
+func (s *Store) Write(key string, r io.Reader) error {
+	return s.writeStream(key, r)
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {

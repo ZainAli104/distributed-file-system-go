@@ -9,6 +9,8 @@ type Peer interface {
 // between the nodes in the internet. This can be of the
 // form (TCP, UDP, websockets, etc.)
 type Transport interface {
+	Dial(string) error
 	ListenAndAccept() error
 	Consume() <-chan RPC
+	Close() error
 }

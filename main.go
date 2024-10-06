@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"github.com/ZainAli104/distributed-file-system-go/p2p"
 	"log"
+	"strings"
+	"time"
 )
 
 func makeServer(listenAddr string, nodes ...string) *FileServer {
@@ -14,8 +16,9 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 	}
 	tcpTransport := p2p.NewTCPTransport(tcpTransportOpts)
 
+	sanitizedAddr := strings.Replace(listenAddr, ":", "", -1) // remove the colon
 	fileServerOpts := FileServerOpts{
-		StorageRoot:       listenAddr + "_network",
+		StorageRoot:       sanitizedAddr + "_network",
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
 		BootstrapNodes:    nodes,
@@ -36,12 +39,17 @@ func main() {
 		log.Fatal(s1.Start())
 	}()
 
-	data := bytes.NewReader([]byte("my big data file here!"))
+	time.Sleep(1 * time.Second)
 
+	go s2.Start()
+	time.Sleep(1 * time.Second)
+
+	data := bytes.NewReader([]byte("my big data file here!"))
 	err := s2.StoreData("myprivatedata", data)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 
-	s2.Start()
+	select {}
 }

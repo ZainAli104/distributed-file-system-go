@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"github.com/ZainAli104/distributed-file-system-go/p2p"
@@ -40,30 +41,58 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 	}
 }
 
-type Payload struct {
-	Key  string
-	Data []byte
-}
-
-func (s *FileServer) broadcast(p Payload) error {
+func (s *FileServer) broadcast(msg *Message) error {
 	var peers []io.Writer
 	for _, peer := range s.peers {
 		peers = append(peers, peer)
 	}
 
 	mw := io.MultiWriter(peers...)
-	return gob.NewEncoder(mw).Encode(p)
+	return gob.NewEncoder(mw).Encode(msg)
+}
+
+type Message struct {
+	Payload any
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// 1. Store this file to disk
 	// 2. Broadcast this file to all the peers
 
-	if err := s.store.Write(key, r); err != nil {
+	buf := new(bytes.Buffer)
+	msg := &Message{
+		Payload: []byte("storagekey"),
+	}
+	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
 		return err
 	}
 
+	for _, peer := range s.peers {
+		if err := peer.Send(buf.Bytes()); err != nil {
+			log.Println("Failed to send message to peer: ", err)
+		}
+	}
+
 	return nil
+
+	//buf := new(bytes.Buffer)
+	//tee := io.TeeReader(r, buf)
+	//
+	//if err := s.store.Write(key, tee); err != nil {
+	//	return err
+	//}
+	//
+	//p := &DataMessage{
+	//	Key:  key,
+	//	Data: buf.Bytes(),
+	//}
+	//
+	//msg := &Message{
+	//	From:    "todo",
+	//	Payload: p,
+	//}
+	//
+	//return s.broadcast(msg)
 }
 
 func (s *FileServer) Stop() {
@@ -89,13 +118,32 @@ func (s *FileServer) loop() {
 
 	for {
 		select {
-		case msg := <-s.Transport.Consume():
-			fmt.Println("Received message: ", msg)
+		case rpc := <-s.Transport.Consume():
+			var msg Message
+			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&msg); err != nil {
+				log.Println("Failed to decode the payload: ", err)
+			}
+
+			fmt.Printf("Received message: %s\n", string(msg.Payload.([]byte)))
+
+			//if err := s.handleMessage(&m); err != nil {
+			//	log.Println("Failed to handle the message: ", err)
+			//}
+
 		case <-s.quitch:
 			return
 		}
 	}
 }
+
+//func (s *FileServer) handleMessage(msg *Message) error {
+//	switch p := msg.Payload.(type) {
+//	case *Message:
+//		fmt.Println("Received data message: ", p)
+//	}
+//
+//	return nil
+//}
 
 func (s *FileServer) bootstrapNetwork() error {
 	for _, addr := range s.BootstrapNodes {

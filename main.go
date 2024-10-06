@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"github.com/ZainAli104/distributed-file-system-go/p2p"
 	"log"
 )
@@ -34,6 +35,13 @@ func main() {
 	go func() {
 		log.Fatal(s1.Start())
 	}()
+
+	data := bytes.NewReader([]byte("my big data file here!"))
+
+	err := s2.StoreData("myprivatedata", data)
+	if err != nil {
+		return
+	}
 
 	s2.Start()
 }

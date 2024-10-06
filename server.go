@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"github.com/ZainAli104/distributed-file-system-go/p2p"
+	"io"
 	"log"
 	"sync"
 )
@@ -36,6 +38,32 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 		quitch:         make(chan struct{}),
 		peers:          make(map[string]p2p.Peer),
 	}
+}
+
+type Payload struct {
+	Key  string
+	Data []byte
+}
+
+func (s *FileServer) broadcast(p Payload) error {
+	var peers []io.Writer
+	for _, peer := range s.peers {
+		peers = append(peers, peer)
+	}
+
+	mw := io.MultiWriter(peers...)
+	return gob.NewEncoder(mw).Encode(p)
+}
+
+func (s *FileServer) StoreData(key string, r io.Reader) error {
+	// 1. Store this file to disk
+	// 2. Broadcast this file to all the peers
+
+	if err := s.store.Write(key, r); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *FileServer) Stop() {

@@ -3,7 +3,6 @@ package p2p
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 )
 
@@ -21,6 +20,17 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 		conn,
 		outbound,
 	}
+}
+
+func (p *TCPPeer) Send(b []byte) error {
+	_, err := p.conn.Write(b)
+	return err
+}
+
+// RemoteAddr implements the Peer interface and will return the
+// remote address of its underlying connection.
+func (p *TCPPeer) RemoteAddr() net.Addr {
+	return p.conn.RemoteAddr()
 }
 
 // Close implements the Peer interface.
@@ -81,8 +91,6 @@ func (t *TCPTransport) ListenAndAccept() error {
 	}
 
 	go t.startAcceptLoop()
-
-	log.Printf("TCP transport listening on %s\n", t.ListenAddr)
 
 	return nil
 }

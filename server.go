@@ -73,6 +73,13 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
+	payload := []byte("THIS IS A LARGE FILE")
+	for _, peer := range s.peers {
+		if err := peer.Send(payload); err != nil {
+			log.Println("Failed to send message to peer: ", err)
+		}
+	}
+
 	return nil
 
 	//buf := new(bytes.Buffer)
@@ -124,7 +131,20 @@ func (s *FileServer) loop() {
 				log.Println("Failed to decode the payload: ", err)
 			}
 
-			fmt.Printf("Received message: %s\n", string(msg.Payload.([]byte)))
+			fmt.Println("Received message from: ", rpc.From.String(), " peers: ", s.peers)
+
+			peer, ok := s.peers[rpc.From.String()]
+			if !ok {
+				panic("peer not found")
+			}
+
+			b := make([]byte, 1024)
+			if _, err := peer.Read(b); err != nil {
+				log.Println("Failed to read from peer: ", err)
+			}
+			panic("bbb")
+
+			fmt.Printf("Received decoded message: %s\n", string(msg.Payload.([]byte)))
 
 			//if err := s.handleMessage(&m); err != nil {
 			//	log.Println("Failed to handle the message: ", err)

@@ -3,6 +3,7 @@ package p2p
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 )
@@ -86,6 +87,8 @@ func (t *TCPTransport) ListenAndAccept() error {
 
 	go t.startAcceptLoop()
 
+	log.Printf("TCP transport listening on port: %s\n", t.ListenAddr)
+
 	return nil
 }
 
@@ -100,8 +103,6 @@ func (t *TCPTransport) startAcceptLoop() {
 			fmt.Printf("Error TCP accepting connection: %v\n", err)
 		}
 
-		fmt.Println("Accepted connection from: ", conn.RemoteAddr())
-
 		go t.handleConn(conn, false)
 	}
 }
@@ -110,7 +111,7 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	var err error
 
 	defer func() {
-		fmt.Printf("Closing Peer connection: %v\n", conn.RemoteAddr())
+		fmt.Printf("Dropping Peer connection: %s\n", err)
 		conn.Close()
 	}()
 
@@ -133,14 +134,13 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		if err != nil {
 			fmt.Printf("Error TCP decoding message: %v\n", err)
 			return
-			//continue
 		}
 
-		rpc.From = conn.RemoteAddr()
+		rpc.From = conn.RemoteAddr().String()
 		peer.Wg.Add(1)
 		fmt.Println("Waiting till stream is done")
 		t.rpcch <- rpc
 		peer.Wg.Wait()
-		fmt.Printf("Received rpc message: %+v\n", rpc)
+		fmt.Println("Stream is done")
 	}
 }

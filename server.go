@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 )
 
 type FileServerOpts struct {
@@ -70,8 +71,11 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	for _, peer := range s.peers {
 		if err := peer.Send(buf.Bytes()); err != nil {
 			log.Println("Failed to send message to peer: ", err)
+			return err
 		}
 	}
+
+	time.Sleep(time.Second * 1)
 
 	payload := []byte("THIS IS A LARGE FILE")
 	for _, peer := range s.peers {
@@ -131,20 +135,20 @@ func (s *FileServer) loop() {
 				log.Println("Failed to decode the payload: ", err)
 			}
 
-			fmt.Println("Received message from: ", rpc.From.String(), " peers: ", s.peers)
+			fmt.Printf("Received decoded message: %s\n", string(msg.Payload.([]byte)))
 
-			peer, ok := s.peers[rpc.From.String()]
+			peer, ok := s.peers[rpc.From]
 			if !ok {
 				panic("peer not found")
 			}
 
-			b := make([]byte, 1024)
+			b := make([]byte, 1000)
 			if _, err := peer.Read(b); err != nil {
-				log.Println("Failed to read from peer: ", err)
+				panic(err)
 			}
-			panic("bbb")
+			fmt.Printf("1 %s\n", string(b))
 
-			fmt.Printf("Received decoded message: %s\n", string(msg.Payload.([]byte)))
+			peer.(*p2p.TCPPeer).Wg.Done()
 
 			//if err := s.handleMessage(&m); err != nil {
 			//	log.Println("Failed to handle the message: ", err)

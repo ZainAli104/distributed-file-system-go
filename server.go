@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 )
 
 type FileServerOpts struct {
@@ -80,14 +81,14 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
-	//time.Sleep(time.Second * 1)
-	//
-	//payload := []byte("THIS IS A LARGE FILE")
-	//for _, peer := range s.peers {
-	//	if err := peer.Send(payload); err != nil {
-	//		log.Println("Failed to send message to peer: ", err)
-	//	}
-	//}
+	time.Sleep(time.Second * 2)
+
+	payload := []byte("THIS IS A LARGE FILE")
+	for _, peer := range s.peers {
+		if err := peer.Send(payload); err != nil {
+			log.Println("Failed to send message to peer: ", err)
+		}
+	}
 
 	return nil
 
@@ -140,39 +141,35 @@ func (s *FileServer) loop() {
 				log.Println("Failed to decode the payload: ", err)
 			}
 
-			fmt.Printf("Payload: %+v\n", msg.Payload)
-
-			peer, ok := s.peers[rpc.From]
-			if !ok {
-				panic("peer not found")
+			if err := s.handleMessage(rpc.From, &msg); err != nil {
+				log.Println("Failed to handle the message: ", err)
 			}
-
-			b := make([]byte, 1000)
-			if _, err := peer.Read(b); err != nil {
-				panic(err)
-			}
-			fmt.Printf("1 %s\n", string(b))
-
-			peer.(*p2p.TCPPeer).Wg.Done()
-
-			//if err := s.handleMessage(&m); err != nil {
-			//	log.Println("Failed to handle the message: ", err)
-			//}
-
 		case <-s.quitch:
 			return
 		}
 	}
 }
 
-//func (s *FileServer) handleMessage(msg *Message) error {
-//	switch p := msg.Payload.(type) {
-//	case *Message:
-//		fmt.Println("Received data message: ", p)
-//	}
-//
-//	return nil
-//}
+func (s *FileServer) handleMessage(from string, msg *Message) error {
+	switch p := msg.Payload.(type) {
+	case MessageStoreFile:
+		return s.handleMessageStoreFile(from, p)
+	}
+
+	return nil
+}
+
+func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) error {
+	fmt.Printf("Received file store message: %+v\n", msg.Key)
+	peer, ok := s.peers[from]
+	if !ok {
+		return fmt.Errorf("peer not found: %s", from)
+	}
+
+	defer peer.(*p2p.TCPPeer).Wg.Done()
+
+	return s.store.Write(msg.Key, peer)
+}
 
 func (s *FileServer) bootstrapNetwork() error {
 	for _, addr := range s.BootstrapNodes {

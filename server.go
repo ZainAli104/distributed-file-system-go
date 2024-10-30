@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"sync"
-	"time"
 )
 
 type FileServerOpts struct {
@@ -56,13 +55,19 @@ type Message struct {
 	Payload any
 }
 
+type MessageStoreFile struct {
+	Key string
+}
+
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// 1. Store this file to disk
 	// 2. Broadcast this file to all the peers
 
 	buf := new(bytes.Buffer)
-	msg := &Message{
-		Payload: []byte("storagekey"),
+	msg := Message{
+		Payload: MessageStoreFile{
+			Key: key,
+		},
 	}
 	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
 		return err
@@ -75,14 +80,14 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
-	time.Sleep(time.Second * 1)
-
-	payload := []byte("THIS IS A LARGE FILE")
-	for _, peer := range s.peers {
-		if err := peer.Send(payload); err != nil {
-			log.Println("Failed to send message to peer: ", err)
-		}
-	}
+	//time.Sleep(time.Second * 1)
+	//
+	//payload := []byte("THIS IS A LARGE FILE")
+	//for _, peer := range s.peers {
+	//	if err := peer.Send(payload); err != nil {
+	//		log.Println("Failed to send message to peer: ", err)
+	//	}
+	//}
 
 	return nil
 
@@ -135,7 +140,7 @@ func (s *FileServer) loop() {
 				log.Println("Failed to decode the payload: ", err)
 			}
 
-			fmt.Printf("Received decoded message: %s\n", string(msg.Payload.([]byte)))
+			fmt.Printf("Payload: %+v\n", msg.Payload)
 
 			peer, ok := s.peers[rpc.From]
 			if !ok {
@@ -200,4 +205,8 @@ func (s *FileServer) Start() error {
 	s.loop()
 
 	return nil
+}
+
+func init() {
+	gob.Register(MessageStoreFile{})
 }

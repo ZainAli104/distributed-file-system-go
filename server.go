@@ -57,37 +57,47 @@ type Message struct {
 }
 
 type MessageStoreFile struct {
-	Key string
+	Key  string
+	Size int64
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// 1. Store this file to disk
-	// 2. Broadcast this file to all the peers
-
 	buf := new(bytes.Buffer)
+	tee := io.TeeReader(r, buf)
+	size, err := s.store.Write(key, tee)
+	if err != nil {
+		return err
+	}
+
+	// 2. Broadcast this file to all the peers
+	msgBuf := new(bytes.Buffer)
 	msg := Message{
 		Payload: MessageStoreFile{
-			Key: key,
+			Key:  key,
+			Size: size,
 		},
 	}
-	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
+	if err := gob.NewEncoder(msgBuf).Encode(msg); err != nil {
 		return err
 	}
 
 	for _, peer := range s.peers {
-		if err := peer.Send(buf.Bytes()); err != nil {
+		if err := peer.Send(msgBuf.Bytes()); err != nil {
 			log.Println("Failed to send message to peer: ", err)
 			return err
 		}
 	}
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 3)
 
-	payload := []byte("THIS IS A LARGE FILE")
 	for _, peer := range s.peers {
-		if err := peer.Send(payload); err != nil {
+		n, err := io.Copy(peer, r)
+		if err != nil {
 			log.Println("Failed to send message to peer: ", err)
 		}
+
+		log.Println("Sent ", n, " bytes to ", peer.RemoteAddr())
 	}
 
 	return nil
@@ -168,7 +178,8 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 
 	defer peer.(*p2p.TCPPeer).Wg.Done()
 
-	return s.store.Write(msg.Key, peer)
+	_, err := s.store.Write(msg.Key, io.LimitReader(peer, msg.Size))
+	return err
 }
 
 func (s *FileServer) bootstrapNetwork() error {

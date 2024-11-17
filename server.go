@@ -62,22 +62,26 @@ type MessageStoreFile struct {
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
+	var (
+		fileBuffer = new(bytes.Buffer)
+		tee        = io.TeeReader(r, fileBuffer)
+	)
+
 	// 1. Store this file to disk
-	buf := new(bytes.Buffer)
-	tee := io.TeeReader(r, buf)
 	size, err := s.store.Write(key, tee)
 	if err != nil {
 		return err
 	}
 
 	// 2. Broadcast this file to all the peers
-	msgBuf := new(bytes.Buffer)
 	msg := Message{
 		Payload: MessageStoreFile{
 			Key:  key,
 			Size: size,
 		},
 	}
+
+	msgBuf := new(bytes.Buffer)
 	if err := gob.NewEncoder(msgBuf).Encode(msg); err != nil {
 		return err
 	}
@@ -92,7 +96,7 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	time.Sleep(time.Second * 3)
 
 	for _, peer := range s.peers {
-		n, err := io.Copy(peer, r)
+		n, err := io.Copy(peer, fileBuffer)
 		if err != nil {
 			log.Println("Failed to send message to peer: ", err)
 		}
@@ -178,8 +182,13 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 
 	defer peer.(*p2p.TCPPeer).Wg.Done()
 
-	_, err := s.store.Write(msg.Key, io.LimitReader(peer, msg.Size))
-	return err
+	n, err := s.store.Write(msg.Key, io.LimitReader(peer, msg.Size))
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Wrote %d bytes to disk", n)
+	return nil
 }
 
 func (s *FileServer) bootstrapNetwork() error {

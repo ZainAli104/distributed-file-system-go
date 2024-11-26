@@ -45,7 +45,7 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	data := bytes.NewReader([]byte("my big data file here!"))
-	err := s2.StoreData("myprivatedata", data)
+	err := s2.Store("myprivatedata", data)
 	if err != nil {
 		log.Println(err)
 		return

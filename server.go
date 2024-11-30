@@ -59,6 +59,7 @@ func (s *FileServer) broadcast(msg *Message) error {
 	}
 
 	for _, peer := range s.peers {
+		peer.Send([]byte{p2p.IncomingMessage})
 		if err := peer.Send(buf.Bytes()); err != nil {
 			log.Println("Failed to send message to peer: ", err)
 			return err
@@ -146,6 +147,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 
 	// TODO: (@Zain) use a multiwriter here.
 	for _, peer := range s.peers {
+		peer.Send([]byte{p2p.IncomingStream})
 		n, err := io.Copy(peer, fileBuffer)
 		if err != nil {
 			log.Println("Failed to send message to peer: ", err)

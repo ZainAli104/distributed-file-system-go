@@ -51,5 +51,17 @@ func main() {
 		return
 	}
 
+	//r, err := s2.Get("myprivatedata")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//b, err := io.ReadAll(r)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//log.Println(string(b))
+
 	select {}
 }

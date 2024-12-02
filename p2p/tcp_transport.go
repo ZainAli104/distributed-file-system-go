@@ -49,8 +49,14 @@ type TCPTransport struct {
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
-		rpcch:            make(chan RPC),
+		rpcch:            make(chan RPC, 1024),
 	}
+}
+
+// Addr implements the Transport interface, which will return the address
+// of the current node.
+func (t *TCPTransport) Addr() string {
+	return t.ListenAddr
 }
 
 // Consume implements the Transport interface, which will return read-only channel
@@ -128,8 +134,8 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	}
 
 	// Read loop
-	rpc := RPC{}
 	for {
+		rpc := RPC{}
 		err = t.Decoder.Decode(conn, &rpc)
 		if err != nil {
 			return

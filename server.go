@@ -143,7 +143,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		return err
 	}
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Millisecond * 5)
 
 	// TODO: (@Zain) use a multiwriter here.
 	for _, peer := range s.peers {
@@ -249,7 +249,7 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 		return err
 	}
 
-	log.Printf("Wrote %d bytes to disk", n)
+	log.Printf("%s written %d bytes to disk", s.Transport.Addr(), n)
 	return nil
 }
 

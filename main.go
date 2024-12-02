@@ -39,16 +39,19 @@ func main() {
 		log.Fatal(s1.Start())
 	}()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	go s2.Start()
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
-	data := bytes.NewReader([]byte("my big data file here!"))
-	err := s2.Store("myprivatedata", data)
-	if err != nil {
-		log.Println(err)
-		return
+	for i := 0; i < 10; i++ {
+		data := bytes.NewReader([]byte("my big data file here!"))
+		err := s2.Store("myprivatedata", data)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		time.Sleep(time.Millisecond * 5)
 	}
 
 	//r, err := s2.Get("myprivatedata")

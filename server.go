@@ -242,7 +242,7 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 		return fmt.Errorf("peer not found: %s", from)
 	}
 
-	defer peer.(*p2p.TCPPeer).Wg.Done()
+	defer peer.CloseStream()
 
 	n, err := s.store.Write(msg.Key, io.LimitReader(peer, msg.Size))
 	if err != nil {

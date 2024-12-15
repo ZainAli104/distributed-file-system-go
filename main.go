@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/ZainAli104/distributed-file-system-go/p2p"
 	"log"
 	"strings"
@@ -46,7 +47,7 @@ func main() {
 
 	for i := 0; i < 10; i++ {
 		data := bytes.NewReader([]byte("my big data file here!"))
-		err := s2.Store("myprivatedata", data)
+		err := s2.Store(fmt.Sprintf("myprivatedata_%s", i), data)
 		if err != nil {
 			log.Println(err)
 			return

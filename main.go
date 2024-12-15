@@ -1,9 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
 	"github.com/ZainAli104/distributed-file-system-go/p2p"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -45,27 +44,23 @@ func main() {
 	go s2.Start()
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 10; i++ {
-		data := bytes.NewReader([]byte("my big data file here!"))
-		err := s2.Store(fmt.Sprintf("myprivatedata_%s", i), data)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		time.Sleep(time.Millisecond * 5)
+	//data := bytes.NewReader([]byte("my big data file here!"))
+	//err := s2.Store("personalPicture.jpg", data)
+	//if err != nil {
+	//	log.Println(err)
+	//	return
+	//}
+	//time.Sleep(time.Millisecond * 5)
+
+	r, err := s2.Get("personalPicture.jpg")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	//r, err := s2.Get("myprivatedata")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//b, err := io.ReadAll(r)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//log.Println(string(b))
+	b, err := io.ReadAll(r)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	select {}
+	log.Println(string(b))
 }

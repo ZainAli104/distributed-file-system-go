@@ -28,7 +28,7 @@ func TestStore(t *testing.T) {
 		key := fmt.Sprintf("foo_%d", i)
 		data := []byte("some jpg bytes")
 
-		err := s.writeStream(key, bytes.NewReader(data))
+		_, err := s.writeStream(key, bytes.NewReader(data))
 		if err != nil {
 			t.Error(err)
 		}
@@ -37,7 +37,7 @@ func TestStore(t *testing.T) {
 			t.Errorf("Expected key %s to exist", key)
 		}
 
-		r, err := s.Read(key)
+		_, r, err := s.Read(key)
 		if err != nil {
 			t.Error(err)
 		}

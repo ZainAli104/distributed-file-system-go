@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"github.com/ZainAli104/distributed-file-system-go/p2p"
 	"io"
 	"log"
@@ -18,6 +19,7 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 
 	sanitizedAddr := strings.Replace(listenAddr, ":", "", -1) // remove the colon
 	fileServerOpts := FileServerOpts{
+		EncKey:            newEncryptionKey(),
 		StorageRoot:       sanitizedAddr + "_network",
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
@@ -44,15 +46,20 @@ func main() {
 	go s2.Start()
 	time.Sleep(2 * time.Second)
 
-	//data := bytes.NewReader([]byte("my big data file here!"))
-	//err := s2.Store("personalPicture.jpg", data)
-	//if err != nil {
-	//	log.Println(err)
-	//	return
-	//}
-	//time.Sleep(time.Millisecond * 5)
+	key := "personalPicture.jpg"
+	data := bytes.NewReader([]byte("my big data file here!"))
+	err := s2.Store(key, data)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
-	r, err := s2.Get("personalPicture.jpg")
+	err = s2.store.Delete(key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r, err := s2.Get(key)
 	if err != nil {
 		log.Fatal(err)
 	}

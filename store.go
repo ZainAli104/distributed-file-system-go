@@ -54,6 +54,9 @@ func (p PathKey) FullPath() string {
 type StoreOpts struct {
 	// Root is the root directory where the files will be stored.
 	Root string
+	// ID of the owner of the storage, which will be used to store all files at that location
+	// so we can sync all the files between the nodes.
+	ID string
 	PathTransformFunc
 }
 
@@ -75,12 +78,15 @@ func NewStore(opts StoreOpts) *Store {
 	if len(opts.Root) == 0 {
 		opts.Root = defaultRootFolderName
 	}
+	if len(opts.ID) == 0 {
+		opts.ID = generateID()
+	}
 	return &Store{opts}
 }
 
 func (s *Store) Has(key string) bool {
 	pathKey := s.PathTransformFunc(key)
-	fullPathWithRoot := s.Root + "/" + pathKey.FullPath()
+	fullPathWithRoot := s.Root + "/" + s.ID + "/" + pathKey.FullPath()
 	_, err := os.Stat(fullPathWithRoot)
 	return !errors.Is(err, os.ErrNotExist)
 }
@@ -96,7 +102,7 @@ func (s *Store) Delete(key string) error {
 		log.Printf("Deleted %s\n", pathKey.FullPath())
 	}()
 
-	firstPathNameWithRoot := s.Root + "/" + pathKey.FirstPathName()
+	firstPathNameWithRoot := s.Root + "/" + s.ID + "/" + pathKey.FirstPathName()
 	return os.RemoveAll(firstPathNameWithRoot)
 }
 
@@ -120,12 +126,12 @@ func (s *Store) WriteDecrypt(encKey []byte, key string, r io.Reader) (int64, err
 
 func (s *Store) openFileForWriting(key string) (*os.File, error) {
 	pathKey := s.PathTransformFunc(key)
-	pathKeyWithRoot := s.Root + "/" + pathKey.PathName
+	pathKeyWithRoot := s.Root + "/" + s.ID + "/" + pathKey.PathName
 	if err := os.MkdirAll(pathKeyWithRoot, os.ModePerm); err != nil {
 		return nil, err
 	}
 
-	fullPathWithRoot := s.Root + "/" + pathKey.FullPath()
+	fullPathWithRoot := s.Root + "/" + s.ID + "/" + pathKey.FullPath()
 
 	return os.Create(fullPathWithRoot)
 }
@@ -147,7 +153,7 @@ func (s *Store) Read(key string) (int64, io.Reader, error) {
 
 func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	pathKey := s.PathTransformFunc(key)
-	fullPathWithRoot := s.Root + "/" + pathKey.FullPath()
+	fullPathWithRoot := s.Root + "/" + s.ID + "/" + pathKey.FullPath()
 	file, err := os.Open(fullPathWithRoot)
 	if err != nil {
 		return 0, nil, err

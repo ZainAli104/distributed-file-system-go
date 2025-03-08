@@ -57,7 +57,7 @@ func main() {
 			return
 		}
 
-		err = s3.store.Delete(key)
+		err = s3.store.Delete(s3.ID, key)
 		if err != nil {
 			log.Fatal(err)
 		}

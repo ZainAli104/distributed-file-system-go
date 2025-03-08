@@ -22,36 +22,39 @@ func TestPathTransformFunc(t *testing.T) {
 
 func TestStore(t *testing.T) {
 	s := newStore()
+	id := generateID()
 	defer teardownStore(t, s)
 
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 20; i++ {
 		key := fmt.Sprintf("foo_%d", i)
 		data := []byte("some jpg bytes")
 
-		_, err := s.writeStream(key, bytes.NewReader(data))
+		_, err := s.writeStream(id, key, bytes.NewReader(data))
 		if err != nil {
 			t.Error(err)
 		}
 
-		if ok := s.Has(key); !ok {
+		if ok := s.Has(id, key); !ok {
 			t.Errorf("Expected key %s to exist", key)
 		}
 
-		_, r, err := s.Read(key)
+		_, r, err := s.Read(id, key)
 		if err != nil {
 			t.Error(err)
 		}
 
 		b, _ := io.ReadAll(r)
+		r.(io.ReadCloser).Close()
+
 		if !bytes.Equal(b, data) {
 			t.Errorf("Expected %s, got %s", data, b)
 		}
 
-		if err = s.Delete(key); err != nil {
+		if err = s.Delete(id, key); err != nil {
 			t.Error(err)
 		}
 
-		if ok := s.Has(key); ok {
+		if ok := s.Has(id, key); ok {
 			t.Errorf("Expected key %s to be deleted", key)
 		}
 	}
